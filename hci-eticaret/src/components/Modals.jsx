@@ -93,7 +93,8 @@ const CheckoutModal = () => {
 
     const handleCreditCardSubmit = (e) => {
         e.preventDefault();
-        if (ccNum.length < 16 || ccCvv.length < 3) {
+        const rawCC = ccNum.replace(/\s/g, '');
+        if (rawCC.length < 16 || ccCvv.length < 3) {
             logAction('Kredi Kartı Ödemesi Form Hatası', true);
             alert("Lütfen geçerli bir kart bilgisi giriniz.");
             return;
@@ -180,13 +181,21 @@ const CheckoutModal = () => {
 
                             <div className="form-group" style={{ marginBottom: '12px' }}>
                                 <label style={{ fontSize: '12px', fontWeight: 'bold', display: 'block', marginBottom: '5px' }}>Kart Numarası</label>
-                                <input type="text" value={ccNum} onChange={e => setCcNum(e.target.value)} placeholder="XXXX XXXX XXXX XXXX" maxLength={16} pattern="\d{0,16}" title="16 Haneli Kart Numarası Girin" style={{ width: '100%', padding: '10px', border: '1px solid #ccc', borderRadius: '6px' }} />
+                                <input type="text" value={ccNum} onChange={e => {
+                                    const val = e.target.value.replace(/\D/g, '');
+                                    const formatted = val.match(/.{1,4}/g)?.join(' ') || '';
+                                    setCcNum(formatted);
+                                }} placeholder="XXXX XXXX XXXX XXXX" maxLength={19} pattern="[\d\s]{16,19}" title="16 Haneli Kart Numarası Girin" style={{ width: '100%', padding: '10px', border: '1px solid #ccc', borderRadius: '6px' }} />
                             </div>
 
                             <div style={{ display: 'flex', gap: '10px' }}>
                                 <div className="form-group" style={{ flex: 1 }}>
                                     <label style={{ fontSize: '12px', fontWeight: 'bold', display: 'block', marginBottom: '5px' }}>Son Kullanma</label>
-                                    <input type="text" value={ccExpiry} onChange={e => setCcExpiry(e.target.value)} placeholder="AA/YY" maxLength={5} style={{ width: '100%', padding: '10px', border: '1px solid #ccc', borderRadius: '6px' }} />
+                                    <input type="text" value={ccExpiry} onChange={e => {
+                                        let val = e.target.value.replace(/\D/g, '');
+                                        if (val.length > 2) val = val.slice(0, 2) + '/' + val.slice(2, 4);
+                                        setCcExpiry(val);
+                                    }} placeholder="AA/YY" maxLength={5} style={{ width: '100%', padding: '10px', border: '1px solid #ccc', borderRadius: '6px' }} />
                                 </div>
                                 <div className="form-group" style={{ flex: 1 }}>
                                     <label style={{ fontSize: '12px', fontWeight: 'bold', display: 'block', marginBottom: '5px' }}>CVV</label>
