@@ -4,22 +4,36 @@ import { useAppContext } from '../context/AppContext';
 export const ModalsContainer = () => {
     return (
         <>
+            <HelpModal />
             <CartMenu />
             <CheckoutModal />
             <ProductDetailModal />
+            <UpsellModal />
+            <HelpModal />
         </>
     );
 };
 
 const CartMenu = () => {
-    const { cart, removeFromCart, isCartOpen, setIsCartOpen, setIsCheckoutOpen, showToast, logAction } = useAppContext();
+    const { cart, removeFromCart, isCartOpen, setIsCartOpen, setIsCheckoutOpen, setIsUpsellOpen, showToast, logAction, user, setActivePage } = useAppContext();
     const subtotal = cart.reduce((s, i) => s + (i.price * i.qty), 0);
+    const kargoFee = subtotal > 0 && subtotal < 500 ? 100 : 0;
 
     const handleCheckout = () => {
         logAction('Sepette Ödemeye Geç Butonuna Tıklandı');
         if (cart.length === 0) { showToast('Sepetiniz boş!'); return; }
+        
+        if (!user) {
+            logAction('Ödeme İçin Giriş Yapmaya Zorlandı (Login Wall)', true);
+            showToast('⚠️ Güvenli ödeme için Giriş Yapmalı veya Ücretsiz Kayıt olmalısınız!');
+            setIsCartOpen(false);
+            setActivePage('Auth');
+            window.scrollTo(0,0);
+            return;
+        }
+
         setIsCartOpen(false);
-        setIsCheckoutOpen(true);
+        setIsUpsellOpen(true);
     };
 
     return (
@@ -38,7 +52,9 @@ const CartMenu = () => {
                     ) : (
                         cart.map(item => (
                             <div key={item.id} className="cart-item">
-                                <div className="cart-item-emoji">{item.emoji}</div>
+                                <div className="cart-item-emoji">
+                                    {item.image ? <img src={item.image} style={{width:'36px', height:'36px', objectFit:'cover', borderRadius:'6px'}} alt=""/> : item.emoji}
+                                </div>
                                 <div className="cart-item-info">
                                     <div className="cart-item-name">{item.name}</div>
                                     <div className="cart-item-price">₺{(item.price * item.qty).toLocaleString('tr-TR')} {item.qty > 1 ? `(${item.qty}x)` : ''}</div>
@@ -51,8 +67,8 @@ const CartMenu = () => {
                 </div>
                 <div className="cart-footer">
                     <div className="cart-subtotal-row"><span>Ara Toplam</span><span>₺{(subtotal).toLocaleString('tr-TR')}</span></div>
-                    <div className="cart-subtotal-row"><span>Kargo</span><span style={{ color: 'var(--green)' }}>Ücretsiz</span></div>
-                    <div className="cart-subtotal-row total"><span>Toplam Tutar</span><span>₺{(subtotal).toLocaleString('tr-TR')}</span></div>
+                    <div className="cart-subtotal-row"><span>Kargo Ücreti</span><span style={{ color: kargoFee ? 'var(--red)' : 'var(--green)' }}>{kargoFee ? `+₺${kargoFee}` : 'Ücretsiz'}</span></div>
+                    <div className="cart-subtotal-row total"><span>Toplam Tutar</span><span>₺{(subtotal + kargoFee).toLocaleString('tr-TR')}</span></div>
                     <button className="cart-checkout-btn" onClick={handleCheckout}>Güvenli Ödeme →</button>
                 </div>
             </div>
@@ -76,15 +92,17 @@ const CheckoutModal = () => {
             setStep(1);
             logAction('Ödeme İşlemi Başlatıldı (Adım 1: Adres)');
         }
-    }, [isCheckoutOpen, logAction]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isCheckoutOpen]);
 
     if (!isCheckoutOpen) return null;
 
     const subtotal = cart.reduce((s, i) => s + (i.price * i.qty), 0);
+    const kargoFee = subtotal > 0 && subtotal < 500 ? 100 : 0;
     const extTotal = (extras.warranty ? 149 : 0) + (extras.fast ? 39 : 0) + (extras.pack ? 25 : 0);
     const serviceFee = 19.99;
     const insuranceFee = 12.50;
-    const finalTotal = subtotal + extTotal + serviceFee + insuranceFee;
+    const finalTotal = subtotal + extTotal + kargoFee + serviceFee + insuranceFee;
 
     const handleExtra = (key) => {
         logAction(`Ekstra Servis Değiştirildi: ${key}`);
@@ -156,8 +174,10 @@ const CheckoutModal = () => {
 
                         <div className="checkout-total-box">
                             <div className="checkout-total-row"><span>Sepetteki Ürünler</span><span>₺{subtotal.toLocaleString('tr-TR')}</span></div>
+                            {kargoFee > 0 && <div className="checkout-total-row added" style={{ color: 'var(--red)' }}><span>100₺ Altı Kargo Ücreti Yansıması</span><span>+ ₺{kargoFee}</span></div>}
+                            {kargoFee === 0 && <div className="checkout-total-row"><span>Kargo Ücreti</span><span style={{ color: 'var(--green)' }}>Ücretsiz</span></div>}
                             <div className="checkout-total-row added" style={{ color: 'var(--orange)' }}><span>Özel Hizmet Paketleri</span><span>+ ₺{extTotal}</span></div>
-                            <div className="checkout-total-row grand"><span>Sepet Tutarı</span><span>₺{(subtotal + extTotal).toLocaleString('tr-TR')}</span></div>
+                            <div className="checkout-total-row grand"><span>Sepet Tutarı</span><span>₺{(subtotal + extTotal + kargoFee).toLocaleString('tr-TR')}</span></div>
                         </div>
 
                         <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
@@ -213,7 +233,7 @@ const CheckoutModal = () => {
                         </div>
 
                         <div className="checkout-total-box" style={{ marginBottom: '20px' }}>
-                            <div className="checkout-total-row"><span>Sepet + Ekstra Paketler</span><span>₺{(subtotal + extTotal).toLocaleString('tr-TR')}</span></div>
+                            <div className="checkout-total-row"><span>Sepet + Kargo + Ekstra Paketler</span><span>₺{(subtotal + extTotal + kargoFee).toLocaleString('tr-TR')}</span></div>
                             <div className="checkout-total-row added" style={{ color: 'var(--red)' }}><span>Zorunlu Kesintiler</span><span>+ ₺{(serviceFee + insuranceFee).toFixed(2)}</span></div>
                             <div className="checkout-total-row grand"><span>Kredi Kartından Çekilecek</span><span>₺{finalTotal.toFixed(2)}</span></div>
                         </div>
@@ -241,6 +261,16 @@ const CheckoutModal = () => {
         </div>
     );
 };
+const fakeComments = [
+    { user: "Hakan T.", rating: 5, text: "Hayatımda aldığım en iyi ürün! Orijinal ve kargo ışık hızındaydı. Kesinlikle tavsiye ederim." },
+    { user: "Merve K.", rating: 5, text: "Tereddüt ederek almıştım ama kalitesi muazzam. Fiyatına göre bedava diyebilirim." },
+    { user: "Burak Y.", rating: 4, text: "Paketleme biraz ezilmişti ama ürün kusursuz çalışıyor. Müşteri hizmetleri çok ilgiliydi, teşekkürler TrendSepet." },
+    { user: "Elif S.", rating: 5, text: "Aynı gün kargoya verildi. İnanılmaz indirim yakaladım, bu fiyata bu kalite imkansız." },
+    { user: "Cem A.", rating: 5, text: "Üçüncü siparişim, eşim de çok beğendi. Kesinlikle stok yapmalısınız!" },
+    { user: "Zeynep D.", rating: 5, text: "Gerçekten anlatıldığı gibi, hatta fotoğraflardakinden çok daha şık duruyor." },
+    { user: "Ali C.", rating: 5, text: "Daha önce başka yerden almıştım sahte çıkmıştı. Buradan aldığım %100 orijinal." },
+    { user: "Seda N.", rating: 4, text: "Kargo bir gün geç geldiği için 1 yıldız kırdım ama ürünün kendisi tam bir efsane." }
+];
 
 const ProductDetailModal = () => {
     const { products, favorites, toggleFav, addToCart, detailProductId, setDetailProductId, logAction } = useAppContext();
@@ -259,6 +289,13 @@ const ProductDetailModal = () => {
     const m = String(Math.floor(sec / 60)).padStart(2, '0');
     const s = String(sec % 60).padStart(2, '0');
 
+    // Pseudo-randomly pick 3 comments based on product ID to remain consistent
+    const selectedComments = [
+        fakeComments[(p.id) % fakeComments.length],
+        fakeComments[(p.id + 3) % fakeComments.length],
+        fakeComments[(p.id + 5) % fakeComments.length]
+    ];
+
     return (
         <div className="modal-bg" onClick={(e) => {
             if (e.target === e.currentTarget) { setDetailProductId(null); logAction('Ürün Detayı Dışarı Tıklanarak Kapatıldı'); }
@@ -270,7 +307,11 @@ const ProductDetailModal = () => {
                 </div>
                 <div className="detail-body">
                     <div>
-                        <div className="detail-img">{p.emoji}</div>
+                        {p.image ? (
+                            <img src={p.image} className="detail-img" alt={p.name} />
+                        ) : (
+                            <div className="detail-img">{p.emoji}</div>
+                        )}
                         <div className="detail-countdown">🔥 Fırsat Fiyatı <span className="dc-timer">{m}:{s}</span> sonra iptal olacak!</div>
                         {p.stock <= 5 && <div className="card-stock-warn" style={{ marginTop: 8 }}>⚠️ DİKKAT: Son {p.stock} adet stok kaldı! Kaçırmak üzeresin!</div>}
                         <div className="viewer-badge" style={{ marginTop: 8 }}>👁️ Şu an {p.viewers + 12} kişi inceledi</div>
@@ -301,6 +342,129 @@ const ProductDetailModal = () => {
                                 {favorites.has(p.id) ? '❤️ Çıkar' : '🤍 Koru'}
                             </button>
                         </div>
+                    </div>
+                </div>
+                
+                {/* AI Fake Reviews Block */}
+                <div style={{ padding: '20px 30px', borderTop: '2px solid #eee', background: '#fafafa', marginTop: '10px' }}>
+                    <h3 style={{ fontFamily: 'Nunito', fontSize: '18px', marginBottom: '15px' }}>Değerlendirmeler ({Math.floor(p.id * 3.4) + 15})</h3>
+                    <div style={{ display: 'grid', gap: '15px' }}>
+                        {selectedComments.map((comment, idx) => (
+                            <div key={idx} style={{ background: '#fff', padding: '15px', borderRadius: '8px', border: '1px solid #eaeaea', boxShadow: '0 2px 5px rgba(0,0,0,0.02)' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                                    <div style={{ fontWeight: 'bold', fontSize: '14px', color: 'var(--dark)' }}>👤 {comment.user} <span style={{ color: '#aaa', fontSize: '12px', fontWeight: 'normal', marginLeft: '5px' }}>☑️ Onaylı Alıcı</span></div>
+                                    <div style={{ color: '#FFD700', fontSize: '13px' }}>{'⭐'.repeat(comment.rating)}</div>
+                                </div>
+                                <p style={{ fontSize: '13px', color: 'var(--mid)', lineHeight: '1.5', margin: 0 }}>"{comment.text}"</p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    );
+};
+
+const UpsellModal = () => {
+    const { isUpsellOpen, setIsUpsellOpen, setIsCheckoutOpen, addToCart, logAction, products } = useAppContext();
+    const [upsellItem, setUpsellItem] = useState(null);
+
+    useEffect(() => {
+        if (isUpsellOpen && products && products.length > 0) {
+            // Pick a random product as the fake upsell
+            setUpsellItem(products[Math.floor(Math.random() * products.length)]);
+            logAction('Upsell (Bait) Popup Gösterildi');
+        }
+    }, [isUpsellOpen, products, logAction]);
+
+    if (!isUpsellOpen || !upsellItem) return null;
+
+    const fakePrice = Math.floor(upsellItem.price * 0.4); // 60% discount
+
+    const handleAccept = () => {
+        logAction('Upsell (Fırsat Ürünü) Kabul Edildi', false);
+        addToCart(upsellItem.id);
+        setIsUpsellOpen(false);
+        setIsCheckoutOpen(true);
+    };
+
+    const handleDecline = () => {
+        logAction('Upsell Reddedildi', false);
+        setIsUpsellOpen(false);
+        setIsCheckoutOpen(true);
+    };
+
+    return (
+        <div className="modal-bg" style={{ zIndex: 10001 }}>
+            <div className="modal-box" style={{ maxWidth: '450px', textAlign: 'center', padding: '30px', animation: 'bounce 0.5s ease' }}>
+                <div style={{ fontSize: '60px', marginBottom: '10px' }}>🎁</div>
+                <h2 style={{ fontFamily: 'Nunito', fontSize: '24px', color: 'var(--red)' }}>DUR! Çıkmadan Önce...</h2>
+                <h3 style={{ fontSize: '18px', margin: '15px 0' }}>Sepetindeki ürünlerle harika gidecek bir teklifimiz var! Sadece 3 dakikalığına geçerli!</h3>
+                
+                <div style={{ background: '#fff8e1', padding: '15px', borderRadius: '10px', border: '2px solid var(--orange)' }}>
+                    {upsellItem.image ? (
+                        <img src={upsellItem.image} style={{ width: '100%', height: '140px', objectFit: 'cover', borderRadius: '8px' }} alt="" />
+                    ) : (
+                        <div style={{ fontSize: '40px' }}>{upsellItem.emoji}</div>
+                    )}
+                    <h4 style={{ margin: '10px 0', fontSize: '16px' }}>{upsellItem.name}</h4>
+                    <p style={{ textDecoration: 'line-through', color: '#999' }}>₺{upsellItem.price}</p>
+                    <p style={{ color: 'var(--orange)', fontSize: '24px', fontWeight: '900' }}>Sadece SİZE ÖZEL ₺{fakePrice}!</p>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '20px' }}>
+                    <button className="checkout-next-btn" style={{ padding: '16px', background: 'var(--green)', color: '#fff', fontSize: '18px' }} onClick={handleAccept}>
+                        EVET! Teklifi Hemen Sepete Ekle
+                    </button>
+                    {/* The dark pattern: very tiny, hard to see decline button that attempts to shame the user */}
+                    <button onClick={handleDecline} style={{ background: 'none', border: 'none', color: '#ccc', textDecoration: 'underline', fontSize: '12px', cursor: 'pointer', marginTop: '10px' }}>
+                        Hayır teşekkürler, ₺{(upsellItem.price - fakePrice)} indirimden vazgeçiyorum ve tam fiyat ödemeyi seviyorum.
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+export const HelpModal = () => {
+    const { isHelpOpen, setIsHelpOpen, logAction } = useAppContext();
+    const [randPhone] = useState(`0850 ${Math.floor(100 + Math.random() * 900)} ${Math.floor(10 + Math.random() * 90)} ${Math.floor(10 + Math.random() * 90)}`);
+
+    if (!isHelpOpen) return null;
+
+    return (
+        <div className="modal-bg" style={{ zIndex: 10002 }}>
+            <div className="modal-box" style={{ maxWidth: '600px', backgroundColor: '#f9f9f9', fontFamily: 'Arial, sans-serif' }}>
+                <div className="modal-header" style={{ marginBottom: '20px', borderBottom: '1px solid #ccc', paddingBottom: '10px', display: 'flex', justifyContent: 'space-between' }}>
+                    <h2 style={{ fontSize: '24px', color: '#333' }}>Yardım ve İletişim Merkezi</h2>
+                    <button className="close-btn" onClick={() => { setIsHelpOpen(false); logAction('Yardım Menüsü Kapatıldı'); }} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', fontWeight: 'bold' }}>✕</button>
+                </div>
+                
+                <div style={{ marginBottom: '30px', textAlign: 'center' }}>
+                    <h3 style={{ fontSize: '18px', color: '#555' }}>Müşteri Hizmetleri</h3>
+                    <p style={{ fontSize: '14px', color: '#777', margin: '10px 0' }}>Bize haftanın 7 günü ulaşabilirsiniz (Yoğunluk sebebiyle tahmini bekleme süresi: 45 dakika)</p>
+                    <div style={{ backgroundColor: '#fff', padding: '15px', borderRadius: '8px', border: '2px solid var(--orange)', display: 'inline-block' }}>
+                        <span style={{ fontSize: '24px', fontWeight: 'bold', color: 'var(--orange)' }}>📞 {randPhone}</span>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 style={{ fontSize: '20px', color: '#333', marginBottom: '15px' }}>Sıkça Sorulan Sorular</h3>
+                    
+                    <div style={{ padding: '15px', backgroundColor: '#fff', border: '1px solid #e0e0e0', borderRadius: '8px', marginBottom: '10px' }}>
+                        <h4 style={{ margin: '0 0 5px 0', fontSize: '16px', color: '#444' }}>Kargom nerede?</h4>
+                        <p style={{ margin: 0, fontSize: '14px', color: '#666' }}>Kargonuzun nerede olduğunu öğrenmek için sistemlerimizde oluşan geçici bir arıza nedeniyle yukarıdaki numarayı aramanız gerekmektedir.</p>
+                    </div>
+
+                    <div style={{ padding: '15px', backgroundColor: '#fff', border: '1px solid #e0e0e0', borderRadius: '8px', marginBottom: '10px' }}>
+                        <h4 style={{ margin: '0 0 5px 0', fontSize: '16px', color: '#444' }}>İade işlemini nasıl yaparım?</h4>
+                        <p style={{ margin: 0, fontSize: '14px', color: '#666' }}>Ürün iade formunu doldurmak için "Kurumsal" sayfasındaki gizli iade butonunu bulmanız gerekmektedir. İade süremiz paket tesliminden itibaren 3 saattir.</p>
+                    </div>
+
+                    <div style={{ padding: '15px', backgroundColor: '#fff', border: '1px solid #e0e0e0', borderRadius: '8px' }}>
+                        <h4 style={{ margin: '0 0 5px 0', fontSize: '16px', color: '#444' }}>Gizli ücret nedir?</h4>
+                        <p style={{ margin: 0, fontSize: '14px', color: '#666' }}>Kullanım koşullarımızı (madde 41.B) kabul ettiğiniz için, kur dalgalanması sebebiyle "Zorunlu Kesinti" çekilmiştir. Bu tutar iade edilemez.</p>
                     </div>
                 </div>
             </div>

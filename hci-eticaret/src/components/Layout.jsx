@@ -48,7 +48,7 @@ export const FlashBanner = () => {
 };
 
 export const Navbar = () => {
-    const { user, cart, favorites, filterCategory, searchProducts, searchQuery, setIsCartOpen, setActivePage, logAction, showToast } = useAppContext();
+    const { user, cart, favorites, filterCategory, searchProducts, searchQuery, setIsCartOpen, setActivePage, logAction, showToast, setIsHelpOpen } = useAppContext();
 
     // Local state to bind input to search button explicitly
     const [searchInput, setSearchInput] = useState(searchQuery || '');
@@ -77,7 +77,7 @@ export const Navbar = () => {
             <div className="header-top">
                 <a onClick={() => handleDeadLink('Satıcı Ol')} style={{ cursor: 'pointer' }}>Satıcı Ol</a>
                 <a onClick={() => handleDeadLink('Kurumsal')} style={{ cursor: 'pointer' }}>Kurumsal</a>
-                <a onClick={() => handleDeadLink('Yardım')} style={{ cursor: 'pointer' }}>Yardım</a>
+                <a onClick={() => { setIsHelpOpen(true); logAction('Yardım Navigasyonuna Tıklandı'); }} style={{ cursor: 'pointer' }}>Yardım</a>
                 <a onClick={() => { setActivePage('About'); logAction('Hakkında Sayfasına Gidildi'); }} style={{ color: 'var(--orange)', fontWeight: 'bold', cursor: 'pointer' }}>Hakkımızda</a>
 
                 {/* User / Guest Toggles */}
@@ -146,7 +146,7 @@ export const Hero = () => {
 };
 
 export const Footer = () => {
-    const { showToast, logAction } = useAppContext();
+    const { showToast, logAction, setIsHelpOpen } = useAppContext();
 
     const handleFooterLink = (sec) => {
         logAction(`Footer Ölü Linke Tıklandı (${sec})`, true);
@@ -167,7 +167,7 @@ export const Footer = () => {
                 <div className="footer-col">
                     <h4>Müşteri Hizmetleri</h4>
                     <ul>
-                        <li onClick={() => handleFooterLink('Yardım')} style={{ cursor: 'pointer', textDecoration: 'underline' }}>Yardım Merkezi</li>
+                        <li onClick={() => { setIsHelpOpen(true); logAction('Footer Yardım Merkezine Tıklandı'); }} style={{ cursor: 'pointer', textDecoration: 'underline' }}>Yardım Merkezi</li>
                         <li onClick={() => handleFooterLink('İade')} style={{ cursor: 'pointer', textDecoration: 'underline' }}>İade & Değişim</li>
                         <li onClick={() => handleFooterLink('Kargo')} style={{ cursor: 'pointer', textDecoration: 'underline' }}>Kargo Takibi</li>
                     </ul>

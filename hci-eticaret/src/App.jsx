@@ -8,6 +8,8 @@ import { Profile } from './components/Profile';
 import { ModalsContainer } from './components/Modals';
 import { ObserverPanel } from './components/ObserverPanel';
 import { PopupAd } from './components/Popups';
+import { Chatbot } from './components/Chatbot';
+import { LiveNotifications } from './components/LiveNotifications';
 import './index.css';
 
 const MainContent = () => {
@@ -30,6 +32,8 @@ const MainContent = () => {
       <PopupAd />
       <Toast />
       <Footer />
+      <Chatbot />
+      <LiveNotifications />
     </>
   );
 };

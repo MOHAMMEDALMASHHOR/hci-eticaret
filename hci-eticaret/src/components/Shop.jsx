@@ -116,7 +116,11 @@ const ProductCard = ({ product: p }) => {
             <button className={`card-fav ${isFav ? 'active' : ''}`} onClick={(e) => { e.stopPropagation(); toggleFav(p.id); }}>
                 {isFav ? '❤️' : '🤍'}
             </button>
-            <div className="card-img" onClick={handleDetail}>{p.emoji}</div>
+            {p.image ? (
+                <img src={p.image} className="card-img" onClick={handleDetail} alt={p.name} />
+            ) : (
+                <div className="card-img" onClick={handleDetail}>{p.emoji}</div>
+            )}
             <div className="card-body" onClick={handleDetail}>
                 <div className="card-brand">{p.brand}</div>
                 <div className="card-name">{displayName}</div>

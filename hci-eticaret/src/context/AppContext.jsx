@@ -80,6 +80,8 @@ export const AppProvider = ({ children }) => {
     // Modal states
     const [isCartOpen, setIsCartOpen] = useState(false);
     const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+    const [isUpsellOpen, setIsUpsellOpen] = useState(false);
+    const [isHelpOpen, setIsHelpOpen] = useState(false);
     const [detailProductId, setDetailProductId] = useState(null);
 
     const toastTimeout = useRef(null);
@@ -130,14 +132,22 @@ export const AppProvider = ({ children }) => {
     const addToCart = (id) => {
         const p = products.find(x => x.id === id);
         if (!p) return;
+        const qtyToAdd = p.minBundle || 1;
+
         setCart(prev => {
             const existing = prev.find(x => x.id === id);
-            const newCart = existing ? prev.map(x => x.id === id ? { ...x, qty: x.qty + 1 } : x) : [...prev, { ...p, qty: 1 }];
+            const newCart = existing ? prev.map(x => x.id === id ? { ...x, qty: x.qty + qtyToAdd } : x) : [...prev, { ...p, qty: qtyToAdd }];
             syncCartToBackend(newCart);
             return newCart;
         });
-        logAction(`Sepete Eklendi: ${p.name}`);
-        showToast(`"${p.name}" sepete eklendi! 🛒`);
+
+        if (p.minBundle) {
+            logAction(`Zorunlu Paket Eklendi: ${p.name} (${p.minBundle} adet)`);
+            showToast(`⚠️ "${p.name}" tekli satılamadığından sepetinize otomatik olarak ${p.minBundle} adet (Koli) eklendi!`);
+        } else {
+            logAction(`Sepete Eklendi: ${p.name}`);
+            showToast(`"${p.name}" sepete eklendi! 🛒`);
+        }
     };
 
     const removeFromCart = (id) => {
@@ -268,6 +278,8 @@ export const AppProvider = ({ children }) => {
         toastMsg, showToast,
         isCartOpen, setIsCartOpen,
         isCheckoutOpen, setIsCheckoutOpen,
+        isUpsellOpen, setIsUpsellOpen,
+        isHelpOpen, setIsHelpOpen,
         detailProductId, setDetailProductId,
         activePage, setActivePage,
         actionLogs, logAction, currentTask, startTask, completeTask, taskReports
